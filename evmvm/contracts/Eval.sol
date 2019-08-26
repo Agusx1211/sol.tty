@@ -215,6 +215,11 @@ contract Eval {
 
             //@TODO: 0x37 CALLDATACOPY
 
+            if (op == 0x37) {
+                opCallDataCopy(vm);
+                continue;
+            }
+
             if (op == 0x38) {
                 opCodeSize(vm);
                 continue;
@@ -637,6 +642,21 @@ contract Eval {
     function opCallDataSize(VM memory vm) private pure {
         stackPush(vm.stack, bytes32(vm.data.length));
         vm.pc++;
+    }
+
+    function opCallDataCopy(VM memory vm) private pure {
+        uint256 destOffset = uint256(stackPop(vm.stack)) + 0x10000;
+        uint256 offset = uint256(stackPop(vm.stack));
+        uint256 length = uint256(stackPop(vm.stack));
+
+        uint loops = (length + 31) / 32;
+        assembly{mstore(destOffset, length)}
+        for (uint i = 0; i < loops; i++) {
+            bytes32 data = bytes32(bytesToBytes32(vm.data, offset + i * 32));
+            assembly {
+                mstore(add(destOffset, mul(32, add(1, i))), data)
+            }
+        }
     }
 
     function opCodeSize(VM memory vm) private pure {
